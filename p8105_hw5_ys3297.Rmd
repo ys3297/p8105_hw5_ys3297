@@ -116,7 +116,7 @@ dist_hom_city
 Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time.
 
 ```{r}
-files_df = 
+longitudinal_df = 
   tibble(file_name = list.files(path = "./data", full.names = TRUE)) %>% 
   mutate(df = map(.x = file_name, ~read_csv(.x))) %>% 
   unnest(df) %>% 
@@ -137,3 +137,19 @@ files_df =
 ```
 
 Make a spaghetti plot showing observations on each subject over time, and comment on differences between groups.
+
+```{r}
+spaghetti_plot = 
+  longitudinal_df %>% 
+  ggplot(aes(x = week, y = observation, group = interaction(arm, id), color = arm)) + 
+  geom_line() + 
+  labs(
+    x = "Week",
+    y = "Observation",
+    title = "Observations for subjects in experiment and control groups for each week"
+  )
+
+spaghetti_plot
+```
+
+In general, the observations of the experiment group continued to rise, while the observations of the control group were comparatively stable over time. The difference in observations between the experiment group and the control group was not apparent at early time points (week 1 or 2) but became greater over time.
