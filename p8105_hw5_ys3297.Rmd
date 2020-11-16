@@ -112,3 +112,28 @@ dist_hom_city
 ```
 
 ## Problem 2
+
+Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time.
+
+```{r}
+files_df = 
+  tibble(file_name = list.files(path = "./data", full.names = TRUE)) %>% 
+  mutate(df = map(.x = file_name, ~read_csv(.x))) %>% 
+  unnest(df) %>% 
+  pivot_longer(
+    week_1:week_8,
+    names_to = "week",
+    names_prefix = "week_",
+    values_to = "observation"
+  ) %>% 
+  mutate(
+    arm = substring(file_name, 8, 10),
+    id = as.numeric(substring(file_name, 12, 13)),
+    arm = str_replace(arm, "con", "control"),
+    arm = str_replace(arm, "exp", "experiment")
+  ) %>% 
+  select(-file_name) %>% 
+  relocate(arm, id)
+```
+
+Make a spaghetti plot showing observations on each subject over time, and comment on differences between groups.
