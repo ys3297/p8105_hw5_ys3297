@@ -1,0 +1,114 @@
+---
+title: "HW5"
+author: Yi Sun
+output: github_document
+---
+
+Solution to HW5.
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(purrr)
+
+knitr::opts_chunk$set(
+	fig.width = 10, 
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+
+Load the homicide data.
+
+```{r}
+homicide_raw = read_csv("./homicide-data.csv")
+```
+
+There are `r homicide_raw %>% nrow()` observations and `r homicide_raw %>% ncol()` variables in the raw data. The data included the location of the killing, whether an arrest was made and, in most cases, basic demographic information about each victim. Each observation is a record of a criminal homicide in the past decade in 50 of the largest American cities.
+
+Create `city_state` and `resolved` variables and keep them only in the resulting dataframe. Drop the data for Tulsa, AL, because there is only 1 homicide record from this city.
+
+```{r}
+homicide_df = 
+  homicide_raw %>% 
+  mutate(
+    city_state = str_c(city, state, sep = ", "),
+    resolved = case_when(
+      disposition == "Closed without arrest" ~ "unsolved",
+      disposition == "Open/No arrest"        ~ "unsolved",
+      disposition == "Closed by arrest"      ~ "solved",
+    )
+  ) %>% 
+  select(city_state, resolved) %>% 
+  filter(city_state != "Tulsa, AL")
+```
+
+Summarize within cities to obtain the total number of homicides and the number of unsolved homicides.
+
+```{r}
+aggregate_df = 
+  homicide_df %>% 
+  group_by(city_state) %>% 
+  summarize(
+    hom_total = n(),
+    hom_unsolved = sum(resolved == "unsolved")
+  )
+```
+
+For the city of Baltimore, MD, use the `prop.test` function to estimate the proportion of homicides that are unsolved, save the output as an R object, apply `broom::tidy` to this object, and pull the estimated proportion and confidence intervals from the resulting tidy dataframe.
+
+```{r}
+bal_results_df = 
+  prop.test(
+    aggregate_df %>% filter(city_state == "Baltimore, MD") %>% pull(hom_unsolved), 
+    aggregate_df %>% filter(city_state == "Baltimore, MD") %>% pull(hom_total)
+  ) %>% 
+  broom::tidy() %>% 
+  select(estimate, conf.low, conf.high)
+```
+
+Now run `prop.test` for each of the cities in `aggregate_df`, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a “tidy” pipeline, making use of `purrr::map`, `purrr::map2`, list columns and `unnest` as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
+
+```{r}
+results_df = 
+  aggregate_df %>% 
+  mutate(
+    prop_tests = map2(.x = hom_unsolved, .y = hom_total, ~prop.test(x = .x, n = .y)),
+    tidy_tests = map(.x = prop_tests, ~broom::tidy(.x))
+  ) %>% 
+  select(-prop_tests) %>% 
+  unnest(tidy_tests) %>% 
+  select(city_state, estimate, conf.low, conf.high)
+```
+
+Create a plot that shows the estimates and CIs for each city, using `geom_errorbar` to add error bars based on the upper and lower limits. Organize cities according to the proportion of unsolved homicides.
+
+```{r}
+dist_hom_city = 
+  results_df %>% 
+  mutate(city_state = fct_reorder(city_state, estimate)) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  labs(
+    x = "City",
+    y = "Proportion of unsolved homicides",
+    title = "Estimated proportions of unsolved homicides with 95% CIs for cities"
+  )
+
+dist_hom_city
+```
+
+## Problem 2
