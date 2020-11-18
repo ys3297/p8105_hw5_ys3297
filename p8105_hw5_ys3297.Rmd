@@ -178,6 +178,7 @@ Generate 5000 datasets using the function above with mean of normal distribution
 ```{r}
 sim_samples_zero = 
   tibble(
+    norm_mean = 0,
     samp = rerun(5000, sim_norm_sample(mu = 0))
   )
 ```
@@ -193,11 +194,11 @@ ttest_zero_df =
   ) %>% 
   select(-t_tests) %>% 
   unnest(tidy_tests) %>% 
-  select(estimate, p.value) %>% 
+  select(norm_mean, estimate, p.value) %>% 
   rename(c("mu_hat" = "estimate", "p_value" = "p.value"))
 ```
 
-Repeat the above for normal distribution with mean from 1 to 6.
+Repeat the above for normal distribution with mean from 1 to 6, and combine `ttest_zero_df` into the resulting `ttest_df`.
 
 ```{r}
 ttest_df = 
@@ -213,10 +214,11 @@ ttest_df =
   select(-t_tests) %>% 
   unnest(tidy_tests) %>% 
   select(norm_mean, estimate, p.value) %>% 
-  rename(c("mu_hat" = "estimate", "p_value" = "p.value"))
+  rename(c("mu_hat" = "estimate", "p_value" = "p.value")) %>% 
+  bind_rows(ttest_zero_df)
 ```
 
-Make a plot showing the proportion of times the null was rejected (the power of the test) on the y axis and the true value of mean on the x axis.
+Make a plot showing the proportion of times the null was rejected on the y axis and the true value of mean on the x axis.
 
 ```{r}
 rej_mean_plot = 
@@ -239,13 +241,14 @@ rej_mean_plot =
     labs(
       x = "True value of mean",
       y = "Proportion of times the null was rejected",
-      title = "Proportion of rejection by true mean of normal distribution (5000 samples for each mean)"
+      title = "Proportion of rejection for each true mean of normal distribution (5000 samples for each mean)"
     )
 
 rej_mean_plot
 ```
 
-From the plot, we can see that the power goes up as the effect size goes up.  
+From the plot, for true mean from 1 to 6, we can see that the proportion of times the null was rejected, or power, goes up as the effect size goes up.  
+For true mean of 0, the proportion of times the null was rejected, which is Type 1 Error, is slightly greater than 0 (about 0.05 as alpha).  
   
 Make a plot showing the average estimate of `mu_hat` on the y axis and the true value of mean on the x axis.  
 Make a second plot showing the average estimate of `mu_hat` only in samples for which the null was rejected on the y axis and the true value of mean on the x axis.
@@ -283,4 +286,6 @@ mu_hat_mean_sig_plot =
 mu_hat_mean_plot + mu_hat_mean_sig_plot
 ```
 
-The sample average of `mu_hat` across samples for which the null was rejected is approximately equal to the true mean when the true mean is greater than or equal to 3, but is greater than the true mean when the true mean is smaller than or equal to 2. The reason is the growing power for growing effect size. When we only picked samples for which the null was rejected, we were picking samples that are far away enough from the null (mean = 0). Therefore, random samples from normal distribution with true mean farther from 0 were selected more completely and the mean of sample means could approximate the corresponding true mean. On the other hand, random samples from normal distribution with true mean closer to 0 were partially selected, and only those which were comparatively farther from the null were selected. Thus, the mean of sample means overestimated the corresponding true mean.
+The sample average of `mu_hat` across samples for which the null was rejected is approximately equal to the true mean for true mean of 3, 4, 5, and 6, but is greater than the true mean for true mean of 1 and 2.  
+The reason is the growing power for growing effect size. When we only picked samples for which the null was rejected, we were picking samples that are far away enough from the null (mean = 0). Therefore, random samples from normal distribution with true mean farther from 0 were selected more completely and the mean of sample means could approximate the corresponding true mean. On the other hand, random samples from normal distribution with true mean closer to 0 were partially selected, and only those which were comparatively farther from the null were selected. Thus, the mean of sample means overestimated the corresponding true mean.  
+For true mean of 0, the sample average of `mu_hat` across samples for which the null was rejected is also approximately equal to the true mean, because in this case, the selected samples equally distributed on two tails of the normal distribution with center or mean of 0. Therefore, even though the sample means were comparatively far away from 0, the mean of sample means still eventually approximates 0.
