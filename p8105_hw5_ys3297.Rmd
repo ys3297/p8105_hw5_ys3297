@@ -32,7 +32,7 @@ scale_fill_discrete = scale_fill_viridis_d
 
 Load the homicide data.
 
-```{r}
+```{r, message=FALSE}
 homicide_raw = read_csv("./homicide-data.csv")
 ```
 
@@ -116,7 +116,7 @@ dist_hom_city
 
 Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time.
 
-```{r}
+```{r, message=FALSE}
 longitudinal_df = 
   tibble(file_name = list.files(path = "./data", full.names = TRUE)) %>% 
   mutate(df = map(.x = file_name, ~read_csv(.x))) %>% 
